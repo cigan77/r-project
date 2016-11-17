@@ -1,0 +1,33 @@
+library("drc")
+
+#####ELISA TEST
+
+rm(list=ls())
+
+library (drc)
+
+###copy data for standards from excel (header – OD, conc)
+stdcrvdata <- read.table(pipe("pbpaste"), sep="\t", header=T)# in windows use paste function
+stdcrvdata$logconc <-log10(stdcrvdata$conc)# log10 from conc
+
+plot(stdcrvdata$logconc, stdcrvdata$OD, main="log standard curve", xlab="x=log(conc)", ylab="y=OD")
+
+fit<-drm(formula =   OD ~ logconc , data = stdcrvdata, fct = LL.4())
+
+x <- seq(.5,4.5, length=100)# range from logconc
+
+y <- (fit$coefficients[2]+ (fit$coefficients[3]- fit$coefficients[2])/(1+(x/fit$coefficients[4])^ fit$coefficients[1]))# from OD ~ d + (a - d)/(1 + (logconc/cc)^b)
+
+lines(x,y, lty="dotted", col="red")
+
+samples <- read.table(pipe("pbpaste"), sep="\t", header=T)# data from mesurments from excel with header OD
+
+samples$loganswer<- fit$coefficients[4]*(((-1* fit$coefficients[3]+samples$OD)/( fit$coefficients[2]-samples$OD))^(1/ fit$coefficients[1]))
+
+samples$conc <- 10^samples$loganswer
+
+write.table(samples,file="mydata.csv",sep=";")
+
+lines(samples$loganswer,samples$OD, type="points", col="blue") 
+
+#Available from: https://www.researchgate.net/post/Anybody_have_any_experience_with_processing_ELISA_data_in_R#view=582d6783404854ed1d190ac2 [accessed Nov 17, 2016].
